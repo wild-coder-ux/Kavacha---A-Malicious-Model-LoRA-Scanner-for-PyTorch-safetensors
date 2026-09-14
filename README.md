@@ -96,3 +96,7 @@ npm run tauri dev
 
 - The spectral heuristic is an **anomaly detector, not proof of malicious intent**. A `malicious` verdict on the LoRA layer means the weights are numerically unusual (spiked/rank-1-dominant), which is worth a human look — not a guaranteed exploit.
 - Large or high-rank LoRA factors are skipped from the dense spectral check (`max_rank`, `max_dense_elements`) to avoid expensive computation; a `skipped` result there is not the same as `clean`.
+
+## License
+
+Licensed under the [Apache License 2.0](./LICENSE).
