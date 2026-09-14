@@ -1,0 +1,2 @@
+[console_scripts]
+fickling = fickling.__main__:main

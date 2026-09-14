@@ -1,0 +1,21 @@
+[package]
+name = "ai-kavacha"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["process"] }
+# Reserved for the Layer 2 LoRA spectral check (native Rust, no Python needed):
+# nalgebra = "0.33"   # linear algebra / SVD for the ΔW spectral statistics
+
+[[bin]]
+name = "ai-kavacha"
+path = "src/main.rs"

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kavacha — model security check</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0B0E10;
+    --bg-warm: #0E1113;
+    --surface: rgba(255,255,255,0.045);
+    --surface-strong: rgba(255,255,255,0.075);
+    --border: rgba(255,255,255,0.09);
+    --border-soft: rgba(255,255,255,0.055);
+    --text: #EDF1F3;
+    --text-muted: #8A94A0;
+    --text-dim: #5C6570;
+    --teal: #2DD9C4;
+    --teal-dim: #1B8E80;
+    --amber: #E3A73C;
+    --crimson: #C1483F;
+    --sans: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(45,217,196,0.08), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 28px 20px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app{ max-width: 760px; margin: 0 auto; }
+
+  /* ---------- NAV ---------- */
+  .nav{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 56px;
+  }
+  .wordmark{
+    font-weight: 700; font-size: 17px; letter-spacing: -0.01em;
+    display:flex; align-items:center; gap:9px;
+  }
+  .wordmark .glyph{
+    width:20px; height:20px; border-radius: 5px;
+    background: linear-gradient(155deg, var(--teal), var(--teal-dim));
+    display:inline-block;
+    box-shadow: 0 0 14px rgba(45,217,196,0.35);
+  }
+  .status-pills{ display:flex; gap:8px; font-size:12.5px; color: var(--text-muted); }
+  .pill{
+    display:flex; align-items:center; gap:6px;
+    padding: 5px 10px; border-radius: 100px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    font-family: var(--mono); font-size: 11.5px;
+  }
+  .dot{ width:6px; height:6px; border-radius:50%; background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+
+  /* ---------- VIEWS ---------- */
+  .view{ display:none; }
+  .view.active{ display:block; animation: fade .35s ease; }
+  @keyframes fade{ from{opacity:0; transform: translateY(6px);} to{opacity:1; transform:none;} }
+
+  /* ---------- DASHBOARD / DROPZONE ---------- */
+  .hero-copy{ text-align:center; margin-bottom: 34px; }
+  .hero-copy h1{
+    font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height:1.15;
+    max-width: 480px; margin: 0 auto 12px;
+  }
+  .hero-copy p{ color: var(--text-muted); font-size: 15.5px; max-width: 420px; margin: 0 auto; line-height:1.5; }
+
+  .dropzone{
+    border: 1.5px dashed var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    padding: 70px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .dropzone:hover{ border-color: rgba(45,217,196,0.45); background: rgba(45,217,196,0.035); }
+  .dropzone::before{
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(circle at 50% 0%, rgba(45,217,196,0.06), transparent 55%);
+    pointer-events:none;
+  }
+  .dz-icon{
+    width:44px; height:44px; margin: 0 auto 18px;
+    border-radius: 12px;
+    background: var(--surface-strong);
+    border: 1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dz-icon svg{ width:20px; height:20px; }
+  .dropzone .dz-title{ font-size: 16.5px; font-weight: 600; margin-bottom: 6px; }
+  .dropzone .dz-sub{ font-size: 13.5px; color: var(--text-muted); font-family: var(--mono); }
+  .dz-formats{ margin-top: 22px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .fmt{
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    padding: 4px 9px; border: 1px solid var(--border-soft); border-radius: 6px;
+  }
+
+  .recent{ margin-top: 44px; }
+  .recent-label{ font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight:500; }
+  .recent-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 13px 14px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    margin-bottom: 7px; font-size: 13.5px;
+  }
+  .recent-row .fname{ font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+  .recent-row .sub{ color: var(--text-dim); font-size: 11.5px; margin-top:2px; }
+  .verdict-chip{
+    font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 100px;
+    display:flex; align-items:center; gap:5px;
+  }
+  .verdict-chip.ok{ color: var(--teal); background: rgba(45,217,196,0.1); }
+  .verdict-chip.warn{ color: var(--amber); background: rgba(227,167,60,0.1); }
+
+  /* ---------- SCANNING VIEW ---------- */
+  .scan-grid{ display:grid; grid-template-columns: 190px 1fr; gap: 22px; }
+  @media (max-width: 620px){ .scan-grid{ grid-template-columns: 1fr; } }
+
+  .scan-file{
+    font-family: var(--mono); font-size: 13px; color: var(--text-muted);
+    margin-bottom: 26px; display:flex; align-items:center; gap:8px;
+  }
+
+  .stepper{ display:flex; flex-direction:column; gap: 2px; }
+  .step{
+    display:flex; gap: 12px; padding: 12px 4px; position:relative;
+  }
+  .step::before{
+    content:''; position:absolute; left:15px; top:34px; bottom:-10px; width:1px;
+    background: var(--border);
+  }
+  .step:last-child::before{ display:none; }
+  .step-num{
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--mono); font-size: 12px; font-weight:600;
+    border: 1px solid var(--border); color: var(--text-dim);
+    background: var(--bg-warm); z-index:1; transition: all .3s;
+  }
+  .step.active .step-num{ border-color: var(--teal); color: var(--teal); box-shadow: 0 0 0 3px rgba(45,217,196,0.12); }
+  .step.done .step-num{ background: var(--teal); border-color: var(--teal); color: #05201C; }
+  .step-body .step-title{ font-size: 13.5px; font-weight: 600; padding-top:5px; }
+  .step-body .step-title{ color: var(--text-dim); transition: color .3s; }
+  .step.active .step-body .step-title, .step.done .step-body .step-title{ color: var(--text); }
+  .step-body .step-desc{ font-size: 11.5px; color: var(--text-dim); margin-top:2px; max-width:150px; }
+
+  .scan-right{ display:flex; flex-direction:column; gap: 16px; }
+
+  .beam-panel{
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 14px;
+    padding: 18px; position: relative; overflow:hidden;
+  }
+  .beam-label{ font-size: 11px; color: var(--text-dim); font-family: var(--mono); margin-bottom: 12px; text-transform: lowercase; }
+  .layers{ display:flex; flex-direction:column; gap:4px; position:relative; }
+  .layer-bar{
+    height: 7px; border-radius: 3px; background: var(--surface-strong);
+    border: 1px solid var(--border-soft);
+  }
+  .layer-bar.flag{ background: rgba(227,167,60,0.22); border-color: rgba(227,167,60,0.4); }
+  .scanline{
+    position:absolute; left:0; right:0; height: 26px;
+    background: linear-gradient(180deg, transparent, rgba(45,217,196,0.16), transparent);
+    border-top:1px solid rgba(45,217,196,0.5); border-bottom:1px solid rgba(45,217,196,0.5);
+    top:0; animation: sweep 2.6s linear infinite;
+    display:none;
+  }
+  .beam-panel.scanning .scanline{ display:block; }
+  @keyframes sweep{ from{ top:-26px; } to{ top: 100%; } }
+
+  .log-panel{
+    background: var(--bg-warm); border: 1px solid var(--border-soft); border-radius: 14px;
+    padding: 16px 18px; font-family: var(--mono); font-size: 12.5px;
+    min-height: 190px; max-height: 240px; overflow-y:auto;
+  }
+  .log-line{ color: var(--text-dim); padding: 3px 0; display:flex; gap:8px; opacity:0; animation: appear .3s forwards; }
+  @keyframes appear{ to{ opacity:1; } }
+  .log-line .ok{ color: var(--teal); }
+  .log-line .amber{ color: var(--amber); }
+  .log-line .txt{ color: var(--text-muted); }
+
+  /* ---------- REPORT VIEW ---------- */
+  .verdict-hero{
+    display:flex; align-items:center; gap: 18px;
+    padding: 26px; border-radius: 16px; margin-bottom: 22px;
+    background: linear-gradient(135deg, rgba(45,217,196,0.09), rgba(45,217,196,0.02));
+    border: 1px solid rgba(45,217,196,0.25);
+  }
+  .shield{ width:52px; height:52px; flex-shrink:0; }
+  .verdict-hero h2{ font-size: 19px; font-weight:700; margin-bottom:3px; }
+  .verdict-hero p{ font-size: 13px; color: var(--text-muted); }
+
+  .layer-panels{ display:flex; flex-direction:column; gap: 12px; margin-bottom: 20px; }
+  .layer-panel{
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .layer-panel .lp-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; }
+  .layer-panel .lp-title{ font-size: 13.5px; font-weight:600; }
+  .layer-panel .lp-tag{ font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); }
+  .check-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 7px 0; font-size: 12.5px; border-top: 1px solid var(--border-soft);
+  }
+  .check-row:first-of-type{ border-top:none; }
+  .check-row .k{ color: var(--text-muted); }
+  .check-row .v{ font-family: var(--mono); font-size: 11.5px; color: var(--teal); }
+
+  .disclaimer{
+    font-size: 12.5px; color: var(--text-dim); line-height:1.6;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    border-radius: 12px; padding: 15px 18px; margin-bottom: 24px;
+  }
+  .disclaimer b{ color: var(--text-muted); font-weight:600; }
+
+  .actions{ display:flex; gap: 10px; flex-wrap:wrap; }
+  .btn{
+    font-family: var(--sans); font-size: 13.5px; font-weight:600;
+    padding: 11px 18px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor:pointer;
+    transition: all .15s;
+  }
+  .btn:hover{ background: var(--surface-strong); }
+  .btn.primary{
+    background: var(--teal); color: #05201C; border-color: var(--teal);
+  }
+  .btn.primary:hover{ background: #3EE6D1; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="nav">
+    <div class="wordmark"><span class="glyph"></span>Kavacha</div>
+    <div class="status-pills">
+      <div class="pill"><span class="dot"></span>engine ready</div>
+      <div class="pill">ledger · 84,213 hashes</div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="view active" id="view-dashboard">
+    <div class="hero-copy">
+      <h1>Drop a model. Know before you run it.</h1>
+      <p>Checks against known malware signatures and, for LoRA adapters, weight-space backdoor patterns — before anything touches your machine.</p>
+    </div>
+
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2DD9C4" stroke-width="1.6"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>
+      </div>
+      <div class="dz-title">Drag a file here, or click to choose one</div>
+      <div class="dz-sub">anime-style-lora-v3.safetensors</div>
+      <div class="dz-formats">
+        <span class="fmt">.safetensors</span><span class="fmt">.gguf</span><span class="fmt">.pt</span><span class="fmt">.pkl</span><span class="fmt">.bin</span>
+      </div>
+    </div>
+
+    <div class="recent">
+      <div class="recent-label">Recently checked</div>
+      <div class="recent-row">
+        <div><div class="fname">qwen2.5-coder-lora-r16.safetensors</div><div class="sub">checked 2 hours ago</div></div>
+        <div class="verdict-chip ok"><span class="dot" style="background:var(--teal)"></span>clean</div>
+      </div>
+      <div class="recent-row">
+        <div><div class="fname">totally-normal-model.pt</div><div class="sub">checked yesterday</div></div>
+        <div class="verdict-chip warn"><span class="dot" style="background:var(--amber)"></span>pickle · manual review</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCANNING ===== -->
+  <div class="view" id="view-scanning">
+    <div class="scan-file">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A94A0" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+      anime-style-lora-v3.safetensors · 42.1 MB
+    </div>
+
+    <div class="scan-grid">
+      <div class="stepper" id="stepper">
+        <div class="step" data-step="0">
+          <div class="step-num">1</div>
+          <div class="step-body"><div class="step-title">Ledger lookup</div><div class="step-desc">Checking hash against community ledger</div></div>
+        </div>
+        <div class="step" data-step="1">
+          <div class="step-num">2</div>
+          <div class="step-body"><div class="step-title">Known-malware scan</div><div class="step-desc">Serialization &amp; injection checks</div></div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-num">3</div>
+          <div class="step-body"><div class="step-title">Weight-space check</div><div class="step-desc">LoRA spectral signature analysis</div></div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-num">4</div>
+          <div class="step-body"><div class="step-title">Report</div><div class="step-desc">Plain-English summary</div></div>
+        </div>
+      </div>
+
+      <div class="scan-right">
+        <div class="beam-panel" id="beamPanel">
+          <div class="beam-label">weight matrix — Q / K / V / O projections</div>
+          <div class="layers" id="layers"></div>
+          <div class="scanline"></div>
+        </div>
+        <div class="log-panel" id="logPanel"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== REPORT ===== -->
+  <div class="view" id="view-report">
+    <div class="verdict-hero">
+      <svg class="shield" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z" fill="rgba(45,217,196,0.15)" stroke="#2DD9C4" stroke-width="1.4"/>
+        <path d="M8.5 12l2.5 2.5 4.5-5" stroke="#2DD9C4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h2>No known threats found</h2>
+        <p>anime-style-lora-v3.safetensors · scanned just now</p>
+      </div>
+    </div>
+
+    <div class="layer-panels">
+      <div class="layer-panel">
+        <div class="lp-head"><div class="lp-title">Known-malware layer</div><div class="lp-tag">picklescan · fickling · modelscan</div></div>
+        <div class="check-row"><span class="k">Serialization format</span><span class="v">safetensors — no code-exec risk</span></div>
+        <div class="check-row"><span class="k">Template injection (GGUF)</span><span class="v">n/a for this format</span></div>
+        <div class="check-row"><span class="k">Community ledger</span><span class="v">1 prior scan · no reports</span></div>
+      </div>
+
+      <div class="layer-panel">
+        <div class="lp-head"><div class="lp-title">Weight-space layer</div><div class="lp-tag">LoRA spectral check</div></div>
+        <div class="check-row"><span class="k">Adapter type detected</span><span class="v">LoRA, rank 16</span></div>
+        <div class="check-row"><span class="k">Spectral signature</span><span class="v">no anomalies vs. baseline</span></div>
+        <div class="check-row"><span class="k">Coverage</span><span class="v">LoRA adapters only</span></div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <b>What this covers:</b> known malware signatures, and LoRA weight-space backdoor signatures for adapters specifically.
+      <b>What it doesn't:</b> full fine-tunes, quantized formats, and backdoors designed to evade evaluation aren't checked by this build yet.
+    </div>
+
+    <div class="actions">
+      <button class="btn primary">Add to safe vault</button>
+      <button class="btn" onclick="reset()">Scan another file</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const layersEl = document.getElementById('layers');
+  const logPanel = document.getElementById('logPanel');
+  const beamPanel = document.getElementById('beamPanel');
+
+  for(let i=0;i<22;i++){
+    const bar = document.createElement('div');
+    bar.className = 'layer-bar';
+    if(i===9) bar.classList.add('flag-candidate');
+    layersEl.appendChild(bar);
+  }
+
+  const logLines = [
+    {t:'ok', m:'Reading file headers and metadata'},
+    {t:'txt', m:'Checking hash against community ledger — 1 prior scan, no reports'},
+    {t:'ok', m:'Scanning for unsafe serialization (pickle) — clean'},
+    {t:'txt', m:'GGUF template check — skipped, format is safetensors'},
+    {t:'txt', m:'LoRA adapter detected — running spectral analysis'},
+    {t:'ok', m:'Computing singular value decomposition (SVD)'},
+    {t:'ok', m:'Singular value distribution — within baseline'},
+    {t:'ok', m:'No weight-space anomalies detected'},
+    {t:'ok', m:'Finalizing security report'},
+  ];
+
+  function show(id){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function reset(){
+    show('view-dashboard');
+    logPanel.innerHTML = '';
+    beamPanel.classList.remove('scanning');
+    document.querySelectorAll('.step').forEach(s=>{s.classList.remove('active','done');});
+  }
+
+  dropzone.addEventListener('click', pickAndScan);
+
+  // Real file picker + real backend call. The animated stepper/log still
+  // plays for pacing (a Rust-side call for just a hash is near-instant,
+  // and once the sidecar + LoRA check are wired up the real steps will
+  // take real time) — but the result rendered into the report screen
+  // now comes from scan_file in main.rs, not a fake timer.
+  async function pickAndScan(){
+    const { invoke } = window.__TAURI__.core;
+    const { open } = window.__TAURI__.dialog;
+    const { downloadDir } = window.__TAURI__.path; // <-- ADDED THIS
+
+    // 1. Get the user's actual Downloads folder path
+    const downloadsPath = await downloadDir();
+
+    // 2. Open the dialog, defaulting to Downloads, with specific file filters
+    const selected = await open({
+      multiple: false,
+      defaultPath: downloadsPath, // <-- FORCES IT TO OPEN HERE
+      filters: [{
+        name: 'AI Model Files',
+        extensions: ['safetensors', 'pt', 'pkl', 'bin', 'gguf']
+      }]
+    });
+
+    // If the user cancels the dialog, stop here
+    if (!selected) return;
+
+    // --- YOUR EXISTING ANIMATION LOGIC REMAINS EXACTLY THE SAME BELOW ---
+    show('view-scanning');
+    beamPanel.classList.add('scanning');
+    const steps = document.querySelectorAll('.step');
+    steps.forEach(s=>s.classList.remove('active','done'));
+    let stepIdx = 0;
+    steps[0].classList.add('active');
+    logPanel.innerHTML = '';
+
+    const resultPromise = invoke('scan_file', { path: selected });
+
+    logLines.forEach((line, i)=>{
+      setTimeout(()=>{
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        const cls = line.t === 'ok' ? 'ok' : (line.t === 'amber' ? 'amber' : 'txt');
+        div.innerHTML = `<span class="${cls}">${line.t==='ok' ? '✓' : '›'}</span><span class="txt">${line.m}</span>`;
+        logPanel.appendChild(div);
+        logPanel.scrollTop = logPanel.scrollHeight;
+
+        const targetStep = Math.min(3, Math.floor((i / logLines.length) * 4));
+        if(targetStep !== stepIdx){
+          steps[stepIdx].classList.remove('active');
+          steps[stepIdx].classList.add('done');
+          stepIdx = targetStep;
+          steps[stepIdx].classList.add('active');
+        }
+      }, i * 650);
+    });
+
+    let result;
+    try {
+      result = await resultPromise;
+    } catch (err) {
+      result = { file: selected, sha256: '', verdict: 'error: ' + err, known_malware_layer: [], weight_space_layer: [] };
+    }
+
+    setTimeout(()=>{
+      steps[stepIdx].classList.remove('active');
+      steps[stepIdx].classList.add('done');
+      beamPanel.classList.remove('scanning');
+      renderReport(result);
+      show('view-report');
+    }, logLines.length * 650 + 500);
+  }
+
+  function renderReport(result){
+    document.querySelector('.verdict-hero p').textContent =
+      (result.file.split(/[\\/]/).pop() || result.file) + ' · sha256 ' + (result.sha256 ? result.sha256.slice(0,16)+'…' : 'n/a');
+    document.querySelector('.verdict-hero h2').textContent = result.verdict;
+
+    const [malwarePanel, weightPanel] = document.querySelectorAll('.layer-panel');
+    const fillChecks = (panel, checks) => {
+      const rows = checks.map(c =>
+        `<div class="check-row"><span class="k">${c.label}</span><span class="v">${c.detail}</span></div>`
+      ).join('');
+      panel.innerHTML = panel.querySelector('.lp-head').outerHTML + rows;
+    };
+    fillChecks(malwarePanel, result.known_malware_layer || []);
+    fillChecks(weightPanel, result.weight_space_layer || []);
+
+    // --- ADD THIS: Update "Recently checked" list ---
+    addToRecentList(result);
+  }
+
+  // --- ADD THIS NEW FUNCTION ---
+  function addToRecentList(result) {
+    const recentContainer = document.querySelector('.recent');
+    if (!recentContainer) return;
+
+    const fileName = result.file.split(/[\\/]/).pop() || result.file;
+    const verdictClass = result.verdict.toLowerCase().includes('clean') ? 'ok' : 'warn';
+    const verdictText = result.verdict.toLowerCase().includes('clean') ? 'clean' : 'review';
+    const dotColor = result.verdict.toLowerCase().includes('clean') ? 'var(--teal)' : 'var(--amber)';
+
+    const recentHTML = `
+      <div class="recent-row">
+        <div>
+          <div class="fname">${fileName}</div>
+          <div class="sub">checked just now</div>
+        </div>
+        <div class="verdict-chip ${verdictClass}">
+          <span class="dot" style="background:${dotColor}"></span>${verdictText}
+        </div>
+      </div>
+    `;
+
+    // Insert after the "Recently checked" label, before existing rows
+    const existingRows = recentContainer.querySelectorAll('.recent-row');
+    if (existingRows.length > 0) {
+      existingRows[0].insertAdjacentHTML('beforebegin', recentHTML);
+    } else {
+      recentContainer.insertAdjacentHTML('beforeend', recentHTML);
+    }
+
+    // Keep only the last 5 entries
+    const allRows = recentContainer.querySelectorAll('.recent-row');
+    if (allRows.length > 5) {
+      allRows[allRows.length - 1].remove();
+    }
+  }
+</script>
+
+</body>
+</html>

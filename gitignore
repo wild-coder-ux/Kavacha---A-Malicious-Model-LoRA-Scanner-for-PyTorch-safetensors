@@ -1,0 +1,27 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tauri / Rust build output
+src-tauri/target/
+
+# Python environments (wherever they live, including the mislabeled
+# top-level `sidecar/` folder, which is actually a venv, not source)
+/sidecar/
+venv/
+.venv/
+env/
+**/env/
+__pycache__/
+*.pyc
+
+# Generated test fixtures (recreated by gensafetenor.py / create_test_lora.py)
+test-lora-*.safetensors
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

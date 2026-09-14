@@ -1,0 +1,7 @@
+# Pin these to exact versions before bundling — check PyPI for the
+# current release of each and lock it here rather than using a range,
+# since the whole point of the sidecar is a reproducible, swappable
+# detection bundle (see the manifest-based update discussion).
+picklescan
+fickling
+modelscan
