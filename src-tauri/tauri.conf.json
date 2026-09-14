@@ -30,8 +30,8 @@
     "icon": [
       "icons/icon.png"
     ],
-    "resources": [
-      "../sidecar/**/*"
+    "externalBin": [
+      "sidecar/scan_engine"
     ]
   }
 }
