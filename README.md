@@ -1,7 +1,7 @@
 
-# AI Kavacha — Sidecar Scanner
+# Kavacha — Malicious Model & LoRA Scanner for PyTorch/safetensors
 
-A defensive, sidecar scanner for ML model and adaptor files (`.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl`, `.pickle`, `.safetensors`). It never deserializes the target model in-process, runs pickle-focused scanners in isolated subprocesses, and inspects LoRA `safetensors` adaptors numerically to catch spiked/rank-1-dominant weight patterns without loading the full model into memory.
+A local, defensive scanner for ML model and adaptor files (`.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl`, `.pickle`, `.safetensors`). It never deserializes the target model in-process, runs pickle-focused scanners in isolated subprocesses, and inspects LoRA `safetensors` adaptors numerically to catch spiked/rank-1-dominant weight patterns without loading the full model into memory.
 
 ## Design goals
 
@@ -25,7 +25,7 @@ Each check returns one of `clean`, `malicious`, `suspicious`, `error`, or `skipp
 ## Files
 
 - **`scan_engine.py`** — the scanner itself. Run it directly against a model/adaptor file.
-- **`gensafetenor.py`** — generates two test `safetensors` LoRA adaptors:
+- **`gen_safetensors.py`** — generates two test `safetensors` LoRA adaptors:
   - `test-lora-spike.safetensors` — engineered to be rank-1-dominant (top singular-value share > 85%), the numeric pattern the spectral heuristic is designed to catch. **This is a pure data file with no code-execution payload** — `safetensors` is a data-only format.
   - `test-lora-normal.safetensors` — a typical adaptor with singular-value mass spread across several directions, used to check for false positives.
 
@@ -48,7 +48,7 @@ Any of these that aren't installed are reported as `"error"` (`... is not instal
 Generate the test fixtures:
 
 ```bash
-python3 gensafetenor.py
+python3 gen_safetensors.py
 ```
 
 Scan a file:
@@ -96,3 +96,7 @@ npm run tauri dev
 
 - The spectral heuristic is an **anomaly detector, not proof of malicious intent**. A `malicious` verdict on the LoRA layer means the weights are numerically unusual (spiked/rank-1-dominant), which is worth a human look — not a guaranteed exploit.
 - Large or high-rank LoRA factors are skipped from the dense spectral check (`max_rank`, `max_dense_elements`) to avoid expensive computation; a `skipped` result there is not the same as `clean`.
+
+## License
+
+Licensed under the [Apache License 2.0](./LICENSE).
