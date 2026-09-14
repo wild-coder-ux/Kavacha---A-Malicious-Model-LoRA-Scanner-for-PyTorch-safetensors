@@ -1,7 +1,7 @@
 
-# AI Kavacha — Sidecar Scanner
+# Kavacha — Malicious Model & LoRA Scanner for PyTorch/safetensors
 
-A defensive, sidecar scanner for ML model and adaptor files (`.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl`, `.pickle`, `.safetensors`). It never deserializes the target model in-process, runs pickle-focused scanners in isolated subprocesses, and inspects LoRA `safetensors` adaptors numerically to catch spiked/rank-1-dominant weight patterns without loading the full model into memory.
+A local, defensive scanner for ML model and adaptor files (`.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl`, `.pickle`, `.safetensors`). It never deserializes the target model in-process, runs pickle-focused scanners in isolated subprocesses, and inspects LoRA `safetensors` adaptors numerically to catch spiked/rank-1-dominant weight patterns without loading the full model into memory.
 
 ## Design goals
 
