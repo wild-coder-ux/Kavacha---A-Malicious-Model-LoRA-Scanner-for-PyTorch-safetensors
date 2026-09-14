@@ -25,7 +25,7 @@ Each check returns one of `clean`, `malicious`, `suspicious`, `error`, or `skipp
 ## Files
 
 - **`scan_engine.py`** — the scanner itself. Run it directly against a model/adaptor file.
-- **`gensafetenor.py`** — generates two test `safetensors` LoRA adaptors:
+- **`gensafetensors.py`** — generates two test `safetensors` LoRA adaptors:
   - `test-lora-spike.safetensors` — engineered to be rank-1-dominant (top singular-value share > 85%), the numeric pattern the spectral heuristic is designed to catch. **This is a pure data file with no code-execution payload** — `safetensors` is a data-only format.
   - `test-lora-normal.safetensors` — a typical adaptor with singular-value mass spread across several directions, used to check for false positives.
 
