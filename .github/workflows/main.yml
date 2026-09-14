@@ -48,7 +48,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
-        run: npm Pages install # Standardized frontend installation
+        run: npm install # Standardized frontend installation
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
